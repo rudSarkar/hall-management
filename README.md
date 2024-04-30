@@ -40,14 +40,6 @@ Upon running the program, you will be presented with a menu of options:
 
 Follow the on-screen prompts to perform the desired actions.
 
-## File Handling
-
-The Hall Management System supports saving and loading student data to/from a file. By default, the file named "databases.txt" is used for this purpose. If the file doesn't exist, it will be automatically created when you run the program.
-
-## Contributing
-
-Contributions to the Hall Management System are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the repository.
-
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
