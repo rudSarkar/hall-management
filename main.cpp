@@ -8,52 +8,67 @@
 
 using namespace std;
 
+class Student;
+
+// MealTracker class
+class MealTracker {
+private:
+    map<string, vector<time_t>> mealTimes;
+    const double mealCost = 100.0; // Assuming a fixed cost per meal
+
+public:
+    void recordMeal(const string& rollNumber, time_t mealTime) {
+        mealTimes[rollNumber].push_back(mealTime);
+    }
+
+    double calculateMealDue(const Student& student) const;
+
+    friend class Student; // Friend declaration
+};
+
 // Student class
 class Student {
-    private: string name;
+private:
+    string name;
     string rollNumber;
     string contactDetails;
     string roomNumber;
     bool mealEnabled;
     double duePayment;
 
-    friend class MealTracker;
-
-    public: Student(const string& name, const string& rollNumber, const string& contactDetails, const string& roomNumber)
+public:
+    Student(const string& name, const string& rollNumber, const string& contactDetails, const string& roomNumber)
         : name(name), rollNumber(rollNumber), contactDetails(contactDetails), roomNumber(roomNumber), mealEnabled(true), duePayment(0.0) {}
 
-    void enableMeal() {
-        mealEnabled = true;
-    }
-    void disableMeal() {
-        mealEnabled = false;
-    }
-    bool isMealEnabled() const {
-        return mealEnabled;
-    }
-
-    void addPayment(double amount) {
-        duePayment -= amount;
-    }
-
+    void enableMeal() { mealEnabled = true; }
+    void disableMeal() { mealEnabled = false; }
+    bool isMealEnabled() const { return mealEnabled; }
+    void addPayment(double amount) { duePayment -= amount; }
     double getDuePayment(const MealTracker& mealTracker) const {
         double due = mealTracker.calculateMealDue(*this);
         return due + duePayment;
     }
 
-    string getName() const {
-        return name;
-    }
-    string getRollNumber() const {
-        return rollNumber;
-    }
-    string getContactDetails() const {
-        return contactDetails;
-    }
-    string getRoomNumber() const {
-        return roomNumber;
-    }
+    string getName() const { return name; }
+    string getRollNumber() const { return rollNumber; }
+    string getContactDetails() const { return contactDetails; }
+    string getRoomNumber() const { return roomNumber; }
+
+    friend class MealTracker; // Friend declaration
 };
+
+// Definition of the calculateMealDue function
+double MealTracker::calculateMealDue(const Student& student) const {
+    double due = 0.0;
+    const auto& rollNumber = student.getRollNumber();
+    const auto& mealTimesForStudent = mealTimes.find(rollNumber);
+
+    if (mealTimesForStudent != mealTimes.end()) {
+        due = mealTimesForStudent->second.size() * mealCost;
+    }
+
+    return due;
+}
 
 
 // MealSchedule class
@@ -75,32 +90,6 @@ class MealSchedule {
     }
 };
 
-
-// MealTracker class
-class MealTracker {
-private:
-    map<string, vector<time_t>> mealTimes;
-    const double mealCost = 100.0; // Assuming a fixed cost per meal
-
-public:
-    void recordMeal(const string& rollNumber, time_t mealTime) {
-        mealTimes[rollNumber].push_back(mealTime);
-    }
-
-    double calculateMealDue(const Student& student) const {
-        double due = 0.0;
-        const auto& rollNumber = student.getRollNumber();
-        const auto& mealTimesForStudent = mealTimes.find(rollNumber);
-
-        if (mealTimesForStudent != mealTimes.end()) {
-            due = mealTimesForStudent->second.size() * mealCost;
-        }
-
-        return due;
-    }
-
-    friend class Student; // Friend declaration
-};
 
 // EntryLog class
 class EntryLog {
@@ -194,10 +183,16 @@ class HallManagementSystem {
         mealSchedule.addMealTiming(dinnerStart, dinnerEnd);
     }
 
-    void registerStudent(const string & name,
-        const string & rollNumber,
-            const string & contactDetails,
-                const string & roomNumber) {
+    void registerStudent(const string& name, const string& rollNumber, const string& contactDetails, const string& roomNumber) {
+        // Check if the roll number already exists
+        for (const auto& student : students) {
+            if (student.getRollNumber() == rollNumber) {
+                cout << "Error: Roll number " << rollNumber << " already exists. Cannot register student." << endl;
+                return;
+            }
+        }
+
+        // Register the new student
         students.emplace_back(name, rollNumber, contactDetails, roomNumber);
         cout << "Student registered successfully: " << name << " (" << rollNumber << ")" << endl;
     }
@@ -250,24 +245,24 @@ class HallManagementSystem {
     }
 
     void printStudentInformation(const MealTracker& mealTracker) const {
-        std::cout << std::left << std::setw(20) << "Name" << std::setw(15) << "Roll Number" << std::setw(25) << "Contact Details" << std::setw(15) << "Room Number" << std::setw(12) << "Meal Status" << std::setw(12) << "Due Payment" << std::endl;
-        std::cout << std::setfill('-') << std::setw(99) << "-" << std::setfill(' ') << std::endl;
+        cout << left << setw(20) << "Name" << setw(15) << "Roll Number" << setw(25) << "Contact Details" << setw(15) << "Room Number" << setw(12) << "Meal Status" << setw(12) << "Due Payment" << endl;
+        cout << setfill('-') << setw(99) << "-" << setfill(' ') << endl;
         for (const auto& student : students) {
-            std::cout << std::left << std::setw(20) << student.getName() << std::setw(15) << student.getRollNumber() << std::setw(25) << student.getContactDetails() << std::setw(15) << student.getRoomNumber() << std::setw(12) << (student.isMealEnabled() ? "Enabled" : "Disabled") << std::setw(12) << student.getDuePayment(mealTracker) << std::endl;
+            cout << left << setw(20) << student.getName() << setw(15) << student.getRollNumber() << setw(25) << student.getContactDetails() << setw(15) << student.getRoomNumber() << setw(12) << (student.isMealEnabled() ? "Enabled" : "Disabled") << setw(12) << student.getDuePayment(mealTracker) << endl;
         }
-        std::cout << std::endl;
+        cout << endl;
     }
 
-    void saveStudentDataToFile(const std::string& filename, const MealTracker& mealTracker) const {
-        std::ofstream file(filename);
+    void saveStudentDataToFile(const string& filename, const MealTracker& mealTracker) const {
+        ofstream file(filename);
         if (file.is_open()) {
             for (const auto& student : students) {
-                file << student.getName() << "," << student.getRollNumber() << "," << student.getContactDetails() << "," << student.getRoomNumber() << "," << student.isMealEnabled() << "," << student.getDuePayment(mealTracker) << std::endl;
+                file << student.getName() << "," << student.getRollNumber() << "," << student.getContactDetails() << "," << student.getRoomNumber() << "," << student.isMealEnabled() << "," << student.getDuePayment(mealTracker) << endl;
             }
             file.close();
-            std::cout << "Student data saved to file: " << filename << std::endl;
+            cout << "Student data saved to file: " << filename << endl;
         } else {
-            std::cout << "Unable to open file: " << filename << std::endl;
+            cout << "Unable to open file: " << filename << endl;
         }
     }
 
@@ -331,7 +326,7 @@ class HallManagementSystem {
         cout << "9. Print Late Entries" << endl;
         cout << "10. Save Student Data to File" << endl;
         cout << "11. Load Student Data from File" << endl;
-        cout << "12. Record Meal for Student" << std::endl;
+        cout << "12. Record Meal for Student" << endl;
         cout << "0. Exit" << endl;
         cout << "Enter your choice: ";
     }
@@ -430,9 +425,9 @@ class HallManagementSystem {
                 break;
             }
             case 12: {
-                std::cout << "Enter Roll Number: ";
-                std::cin >> rollNumber;
-                mealTime = std::time(nullptr);
+                cout << "Enter Roll Number: ";
+                cin >> rollNumber;
+                mealTime = time(nullptr);
                 mealTracker.recordMeal(rollNumber, mealTime);
                 break;
             }
