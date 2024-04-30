@@ -14,11 +14,13 @@ class Student;
 class MealTracker {
 private:
     map<string, vector<time_t>> mealTimes;
-    const double mealCost = 100.0; // Assuming a fixed cost per meal
+    const double mealCost = 100.0; // A fixed cost per meal
 
 public:
-    void recordMeal(const string& rollNumber, time_t mealTime) {
+    bool recordMeal(const string& rollNumber, time_t mealTime) {
         mealTimes[rollNumber].push_back(mealTime);
+
+        return !mealTimes[rollNumber].empty();
     }
 
     double calculateMealDue(const Student& student) const;
@@ -111,13 +113,31 @@ class EntryLog {
     }
 
     void printLogs() const {
-        cout << "Entry and Exit Logs:" << endl;
-        for (const auto & log: logs) {
-            cout << "Roll Number: " << get < 0 > (log) << endl;
-            cout << "Entry Time: " << put_time(localtime( & get < 1 > (log)), "%c") << endl;
-            if (get < 2 > (log) != 0) {
-                cout << "Exit Time: " << put_time(localtime( & get < 2 > (log)), "%c") << endl;
+        // Define column widths
+        const int rollNumberWidth = 15;
+        const int entryTimeWidth = 25;
+        const int exitTimeWidth = 25;
+
+        // Display header
+        cout << setw(rollNumberWidth) << left << "Roll Number";
+        cout << setw(entryTimeWidth) << left << "Entry Time";
+        cout << setw(exitTimeWidth) << left << "Exit Time" << endl;
+
+        // Display logs
+        for (const auto &log : logs) {
+            // Roll Number
+            cout << setw(rollNumberWidth) << left << get<0>(log);
+
+            // Entry Time
+            cout << setw(entryTimeWidth) << left << put_time(localtime(&get<1>(log)), " %c");
+
+            // Exit Time if available
+            if (get<2>(log) != 0) {
+                cout << setw(exitTimeWidth) << left << put_time(localtime(&get<2>(log)), " %c");
+            } else {
+                cout << setw(exitTimeWidth) << left << " N/A";
             }
+
             cout << endl;
         }
     }
@@ -126,11 +146,11 @@ class EntryLog {
 // Payment class
 class Payment {
     public: double calculateDueAmount(bool mealEnabled) {
-        // Assume a fixed monthly fee for meal plans
+        // A fixed monthly fee for meal plans
         return mealEnabled ? 100.0 : 0.0;
     }
 
-    void recordPayment(Student & student, double amount) {
+    void recordPayment(Student &student, double amount) {
         student.addPayment(amount);
     }
 };
@@ -192,16 +212,13 @@ class HallManagementSystem {
             }
         }
 
-        // Register the new student
         students.emplace_back(name, rollNumber, contactDetails, roomNumber);
-        cout << "Student registered successfully: " << name << " (" << rollNumber << ")" << endl;
     }
 
     void enableMealForStudent(const string & rollNumber) {
         for (auto & student: students) {
             if (student.getRollNumber() == rollNumber) {
                 student.enableMeal();
-                cout << "Meal enabled for student: " << student.getName() << " (" << rollNumber << ")" << endl;
                 break;
             }
         }
@@ -226,21 +243,17 @@ class HallManagementSystem {
         entryLog.recordExit(rollNumber, exitTime);
     }
 
-    double getDuePaymentForStudent(const string & rollNumber) {
-        for (const auto & student: students) {
-            if (student.getRollNumber() == rollNumber) {
-                return payment.calculateDueAmount(student.isMealEnabled());
-            }
-        }
-        return 0.0; // Student not found
-    }
-
     void makePayment(const string & rollNumber, double amount) {
+        bool found = false;
         for (auto & student: students) {
             if (student.getRollNumber() == rollNumber) {
                 payment.recordPayment(student, amount);
+                found = true;
                 break;
             }
+        }
+        if (!found) {
+            cout << "No student found with roll number: " << rollNumber << endl;
         }
     }
 
@@ -265,6 +278,7 @@ class HallManagementSystem {
             cout << "Unable to open file: " << filename << endl;
         }
     }
+
 
     void loadStudentDataFromFile(const string & filename) {
         ifstream file(filename);
@@ -314,20 +328,22 @@ class HallManagementSystem {
     }
 
     void displayMenu() const {
-        cout << "Hall Management System Menu:" << endl;
-        cout << "1. Register Student" << endl;
-        cout << "2. Enable/Disable Meal for Student" << endl;
-        cout << "3. Record Student Entry" << endl;
-        cout << "4. Record Student Exit" << endl;
-        cout << "5. Get Due Payment for Student" << endl;
-        cout << "6. Make Payment for Student" << endl;
-        cout << "7. Print Student Information" << endl;
-        cout << "8. Print Entry and Exit Logs" << endl;
-        cout << "9. Print Late Entries" << endl;
-        cout << "10. Save Student Data to File" << endl;
-        cout << "11. Load Student Data from File" << endl;
-        cout << "12. Record Meal for Student" << endl;
-        cout << "0. Exit" << endl;
+        cout << "===================================" << endl;
+        cout << "|   Hall Management System Menu   |" << endl;
+        cout << "===================================" << endl;
+        cout << "| 1. Register Student             |" << endl;
+        cout << "| 2. Manage Meal                  |" << endl;
+        cout << "| 3. Record Meal                  |" << endl;
+        cout << "| 4. Record Entry                 |" << endl;
+        cout << "| 5. Record Exit                  |" << endl;
+        cout << "| 6. Make Payment                 |" << endl;
+        cout << "| 7. Print Student Details        |" << endl;
+        cout << "| 8. View Entry/Exit Logs         |" << endl;
+        cout << "| 9. View Late Entries            |" << endl;
+        cout << "| 10. Save Student Data           |" << endl;
+        cout << "| 11. Load Student Data           |" << endl;
+        cout << "| 0. Exit                         |" << endl;
+        cout << "===================================" << endl;
         cout << "Enter your choice: ";
     }
 
@@ -344,6 +360,9 @@ class HallManagementSystem {
 
             switch (choice) {
             case 1: {
+                cout << endl;
+                cout << "=== Register Student ===" << endl;
+                
                 cout << "Enter Student Name: ";
                 cin.ignore();
                 getline(cin, name);
@@ -354,9 +373,13 @@ class HallManagementSystem {
                 cout << "Enter Room Number: ";
                 getline(cin, roomNumber);
                 registerStudent(name, rollNumber, contactDetails, roomNumber);
+                cout << "Student registered successfully: " << name << " (" << rollNumber << ")" << endl;
                 break;
             }
             case 2: {
+                cout << endl;
+                cout << "=== Enable/Disable Meal ===" << endl;
+
                 cout << "Enter Roll Number: ";
                 cin >> rollNumber;
                 cout << "Enable (1) or Disable (0) Meal: ";
@@ -364,33 +387,53 @@ class HallManagementSystem {
                 cin >> choice;
                 if (choice == 1) {
                     enableMealForStudent(rollNumber);
+                    cout << "Meal enabled for student roll: " << " (" << rollNumber << ")" << endl;
                 } else {
                     disableMealForStudent(rollNumber);
+                    cout << "Meal disabled for student roll: " << " (" << rollNumber << ")" << endl;
                 }
                 break;
             }
             case 3: {
+                cout << endl;
+                cout << "=== Record Meal ===" << endl;
+
+                cout << "Enter Roll Number: ";
+                cin >> rollNumber;
+                mealTime = time(nullptr);
+                
+                if (mealTracker.recordMeal(rollNumber, mealTime)) {
+                    cout << "Meal recorded successfully!" << endl;
+                } else {
+                    cout << "Failed to record the meal." << endl;
+                }
+
+                break;
+            }
+            case 4: {
+                cout << endl;
+                cout << "=== Record Entry ===" << endl;
+
                 cout << "Enter Roll Number: ";
                 cin >> rollNumber;
                 entryTime = time(nullptr);
                 recordStudentEntry(rollNumber, entryTime);
                 break;
             }
-            case 4: {
+            case 5: {
+                cout << endl;
+                cout << "=== Record Exit ===" << endl;
+
                 cout << "Enter Roll Number: ";
                 cin >> rollNumber;
                 exitTime = time(nullptr);
                 recordStudentExit(rollNumber, exitTime);
                 break;
             }
-            case 5: {
-                cout << "Enter Roll Number: ";
-                cin >> rollNumber;
-                double duePayment = getDuePaymentForStudent(rollNumber);
-                cout << "Due Payment for Student " << rollNumber << ": BDT " << duePayment << endl;
-                break;
-            }
             case 6: {
+                cout << endl;
+                cout << "=== Make Meal Payment ===" << endl;
+
                 cout << "Enter Roll Number: ";
                 cin >> rollNumber;
                 cout << "Enter Amount: ";
@@ -399,14 +442,26 @@ class HallManagementSystem {
                 break;
             }
             case 7: {
+                cout << endl;
+                cout << "=== Student Information ===" << endl;
+                cout << endl;
+
                 printStudentInformation(mealTracker);
                 break;
             }
             case 8: {
+                cout << endl;
+                cout << "=== Student Entry Logs ===" << endl;
+                cout << endl;
+
                 entryLog.printLogs();
                 break;
             }
             case 9: {
+                cout << endl;
+                cout << "=== Student Late Entries ===" << endl;
+                cout << endl;
+
                 lateEntry.printLateEntries();
                 break;
             }
@@ -422,13 +477,6 @@ class HallManagementSystem {
                 cin.ignore();
                 getline(cin, name);
                 loadStudentDataFromFile(name);
-                break;
-            }
-            case 12: {
-                cout << "Enter Roll Number: ";
-                cin >> rollNumber;
-                mealTime = time(nullptr);
-                mealTracker.recordMeal(rollNumber, mealTime);
                 break;
             }
             case 0:
